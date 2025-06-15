@@ -1,3 +1,4 @@
+import base64
 import os
 import subprocess
 import streamlit as st
@@ -16,14 +17,24 @@ def del_files(dir):
             os.remove(file_path)
 
 
-del_files("data")
-del_files("out")
-
 OUT_DIR_PATH = "out"
 CAM_VIDEO_PATH = f"{OUT_DIR_PATH}/webcam_output.mp4"
+PDF_PATH = "AVBER-Report.pdf"  # caminho relativo ao arquivo PDF
 
 st.set_page_config(layout="wide")
-st.title("AVBER - Ads Validation by Emotion Recognition")
+st.markdown(
+    """
+    <div style="text-align: center;">
+        <img 
+            src="https://raw.githubusercontent.com/lucaslealll/puc-vcrm-20250616-pjt-final-ads-validator/main/assets/avber.png"
+        width="200">
+        <h1 style="margin-top: 10px;">
+            AVBER - Ads Validation by Emotion Recognition
+        </h1>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Initialize session states
 if "TMP_VIDEO_PATH" not in st.session_state:
@@ -117,20 +128,6 @@ if st.session_state["TMP_VIDEO_PATH"]:
                 st.session_state["RUNNING_ANALYSIS"] = False
                 st.rerun()
 
-        elif st.session_state["CONCLUDED_ANALYSIS"]:
-            st.success("Analysis completed.")
-            if st.button("New Analysis", icon=":material/refresh:"):
-                st.session_state.update(
-                    {
-                        "RUNNING_ANALYSIS": False,
-                        "STOP_ANALYSIS": False,
-                        "CONCLUDED_ANALYSIS": False,
-                        "CANCELED_ANALYSIS": False,
-                        "TMP_VIDEO_PATH": None,
-                    }
-                )
-                st.rerun()
-
         # Space for status and progress
         status_placeholder = st.empty()
         progress_bar = st.progress(0)
@@ -140,83 +137,113 @@ if st.session_state["TMP_VIDEO_PATH"]:
         if st.session_state["RUNNING_ANALYSIS"]:
             st.video(st.session_state["TMP_VIDEO_PATH"], autoplay=True)
 
-# Logic for analysis synchronized with video
-if (
-    st.session_state["RUNNING_ANALYSIS"]
-    and not st.session_state["CANCELED_ANALYSIS"]
-    and not st.session_state["CONCLUDED_ANALYSIS"]
-):
-    cap_video = cv2.VideoCapture(st.session_state["TMP_VIDEO_PATH"])
-    cap_webcam = cv2.VideoCapture(0)
-    out = cv2.VideoWriter(CAM_VIDEO_PATH, cv2.VideoWriter_fourcc(*"mp4v"), 20.0, (640, 480))
+    # Logic for analysis synchronized with video
+    if (
+        st.session_state["RUNNING_ANALYSIS"]
+        and not st.session_state["CANCELED_ANALYSIS"]
+        and not st.session_state["CONCLUDED_ANALYSIS"]
+    ):
+        del_files("data")
+        del_files("out")
+        cap_video = cv2.VideoCapture(st.session_state["TMP_VIDEO_PATH"])
+        cap_webcam = cv2.VideoCapture(0)
+        out = cv2.VideoWriter(CAM_VIDEO_PATH, cv2.VideoWriter_fourcc(*"mp4v"), 20.0, (640, 480))
 
-    total_frames = int(cap_video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap_video.get(cv2.CAP_PROP_FPS)
-    frame_duration = 1.0 / fps if fps > 0 else 1.0 / 25  # default fallback
+        total_frames = int(cap_video.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap_video.get(cv2.CAP_PROP_FPS)
+        frame_duration = 1.0 / fps if fps > 0 else 1.0 / 25  # default fallback
 
-    current_frame = 0
-    prev_time = time.time()
-
-    while cap_video.isOpened():
-        if st.session_state["CANCELED_ANALYSIS"]:
-            status_placeholder.markdown("🗷 Analysis canceled by the user.")
-            break
-
-        ret_vid, frame_vid = cap_video.read()
-        ret_cam, frame_cam = cap_webcam.read()
-
-        if not ret_vid or not ret_cam:
-            break
-
-        out.write(frame_cam)
-        current_frame += 1
-
-        # Update progress and status
-        progress = current_frame / total_frames
-        progress_bar.progress(progress)
-        status_placeholder.markdown(f"● Capturing reactions... {int(progress * 100)}%")
-
-        # Wait the correct time for the next frame (synchronized with FPS)
-        elapsed = time.time() - prev_time
-        sleep_time = frame_duration - elapsed
-        if sleep_time > 0:
-            time.sleep(sleep_time)
+        current_frame = 0
         prev_time = time.time()
 
-    with col_info:
-        st.markdown(f"🗹 Capturing reactions... 100%")
+        while cap_video.isOpened():
+            if st.session_state["CANCELED_ANALYSIS"]:
+                status_placeholder.markdown("🗷 Analysis canceled by the user.")
+                break
 
-    # Release resources
-    cap_video.release()
-    cap_webcam.release()
-    out.release()
+            ret_vid, frame_vid = cap_video.read()
+            ret_cam, frame_cam = cap_webcam.read()
 
-    if not st.session_state["CANCELED_ANALYSIS"]:
+            if not ret_vid or not ret_cam:
+                break
 
-        def update_progress(progress):
-            percent = int(progress * 100)
-            status_placeholder.markdown(f"🗘 Processing emotions... {percent}%")
-            progress_bar.progress(percent)
+            out.write(frame_cam)
+            current_frame += 1
 
-        process_emotions(CAM_VIDEO_PATH, AD_VIDEO_PATH, progress_callback=update_progress)
+            # Update progress and status
+            progress = current_frame / total_frames
+            progress_bar.progress(progress)
+            status_placeholder.markdown(f"● Capturing reactions... {int(progress * 100)}%")
+
+            # Wait the correct time for the next frame (synchronized with FPS)
+            elapsed = time.time() - prev_time
+            sleep_time = frame_duration - elapsed
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            prev_time = time.time()
+
         with col_info:
-            st.markdown(f"🗹 Processing emotions... 100%")
+            st.markdown(f"🗹 Capturing reactions... 100%")
 
-        status_placeholder.markdown("🗘 Processing gaze tracking...")
-        track_gaze(CAM_VIDEO_PATH)
-        with col_info:
-            st.markdown("🗹 Processing gaze tracking... 100%")
+        # Release resources
+        cap_video.release()
+        cap_webcam.release()
+        out.release()
 
-        status_placeholder.markdown("🗘 Generating graphs...")
-        generate_graphs()
-        with col_info:
-            st.markdown("🗹 Generating graphs... 100%")
+        if not st.session_state["CANCELED_ANALYSIS"]:
 
-        # st.image(f"{OUT_DIR_PATH}/emotion_plot.png", caption="Emotion Chart", use_column_width=True)
-        # st.image(f"{OUT_DIR_PATH}/heatmap.png", caption="Gaze Heatmap", use_column_width=True)
-        status_placeholder.markdown("🗹 Analysis completed!")
+            def update_progress(progress):
+                percent = int(progress * 100)
+                status_placeholder.markdown(f"🗘 Processing emotions... {percent}%")
+                progress_bar.progress(percent)
 
-        st.session_state["RUNNING_ANALYSIS"] = False
-        st.session_state["CONCLUDED_ANALYSIS"] = True
+            process_emotions(CAM_VIDEO_PATH, AD_VIDEO_PATH, progress_callback=update_progress)
+            with col_info:
+                st.markdown(f"🗹 Processing emotions... 100%")
 
-        subprocess.run(["python", "report.py"], capture_output=True, text=True)
+            status_placeholder.markdown("🗘 Processing gaze tracking...")
+            track_gaze(CAM_VIDEO_PATH)
+            with col_info:
+                st.markdown("🗹 Processing gaze tracking... 100%")
+
+            status_placeholder.markdown("🗘 Generating graphs...")
+            generate_graphs()
+            with col_info:
+                st.markdown("🗹 Generating graphs... 100%")
+
+            # st.image(f"{OUT_DIR_PATH}/emotion_plot.png", caption="Emotion Chart", use_column_width=True)
+            # st.image(f"{OUT_DIR_PATH}/heatmap.png", caption="Gaze Heatmap", use_column_width=True)
+            status_placeholder.markdown("🗹 Analysis completed!")
+
+            st.session_state["RUNNING_ANALYSIS"] = False
+            st.session_state["CONCLUDED_ANALYSIS"] = True
+
+            subprocess.run(["python", "report.py"], capture_output=True, text=True)
+
+            with col_info:
+                st.markdown("🗎 PDF created at local directory!")
+
+
+if st.session_state["CONCLUDED_ANALYSIS"]:
+    st.success("Analysis completed.")
+    if st.button("New Analysis", icon=":material/refresh:"):
+        st.session_state.update(
+            {
+                "RUNNING_ANALYSIS": False,
+                "STOP_ANALYSIS": False,
+                "CONCLUDED_ANALYSIS": False,
+                "CANCELED_ANALYSIS": False,
+                "TMP_VIDEO_PATH": None,
+            }
+        )
+        st.rerun()
+
+    # Botão para exibir o PDF
+    if st.button("Preview Report", icon=":material/picture_as_pdf:"):
+        with open("AVBER-Report.pdf", "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+
+        pdf_display = f"""
+        <iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="1000" type="application/pdf"></iframe>
+        """
+        st.markdown(pdf_display, unsafe_allow_html=True)

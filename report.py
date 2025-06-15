@@ -32,6 +32,12 @@ def extract_times_from_images(directory):
             times.add(int(match.group(2)))
     return sorted(times)
 
+def extract_emotion_from_filename(filename):
+    match = re.match(r"cam_\d+ms_([a-zA-Z]+)_\d+\.(jpg|jpeg|png)", filename, re.IGNORECASE)
+    if match:
+        return match.group(1).capitalize()
+    return "Unknown"
+
 
 def generate_emotion_data(times_ms):
     times_sec = np.array(times_ms) / 1000
@@ -143,8 +149,11 @@ def create_pdf(pairs, pdf_path, page_size=PAGE_SIZE):
 
         if "cam" in pair:
             cam_x = MARGIN_X + IMAGE_WIDTH + GAP_X
-            c.drawImage(pair["cam"], cam_x, img_y, width=IMAGE_WIDTH, height=IMAGE_HEIGHT)
-            c.drawCentredString(cam_x + IMAGE_WIDTH / 2, img_y - 12, f"Cam - {ms_to_min_sec(ms)}")
+            cam_path = pair["cam"]
+            emotion = extract_emotion_from_filename(os.path.basename(cam_path))
+            c.drawImage(cam_path, cam_x, img_y, width=IMAGE_WIDTH, height=IMAGE_HEIGHT)
+            c.drawCentredString(cam_x + IMAGE_WIDTH / 2, img_y - 12, f"Cam - {ms_to_min_sec(ms)} - Emotion: {emotion}")
+
 
         y_pos = img_y - 25  # espaço abaixo das imagens
 
