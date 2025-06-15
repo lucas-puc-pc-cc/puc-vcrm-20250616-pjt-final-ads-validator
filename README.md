@@ -11,7 +11,12 @@
 
 ---
 ### **Descrição do Projeto**
-- [Leia a descrição completa no Google Docs](https://docs.google.com/document/d/16zR-Yyn3FRSrZcztXzChu3yRixsqHoV_HX5oCLeXQ1Q).
+- [▶ **Vídeo de demonstração**](https://youtu.be/E7MuDGmdPfQ)
+- [🗎 Leia a descrição completa no Google Docs](https://docs.google.com/document/d/16zR-Yyn3FRSrZcztXzChu3yRixsqHoV_HX5oCLeXQ1Q).
+
+<div align="center">
+    <img src="assets/print.png" height="100%" style="border-radius: 10px;" />
+</div>
 
 ---
 ### Análise de Atenção em Propagandas
@@ -41,43 +46,44 @@ Este projeto tem como objetivo capturar e analisar o comportamento de usuários 
 ### Estrutura de Diretórios
 ```py
 .
-├── app.py                            # Arquivo principal, controla a execução do sistema.
-├── src                               # Contém vídeos de anúncios para análise.
+├── app.py                        # Arquivo principal da aplicação Streamlit
+├── report.py                     # Script gerador do relatório PDF
+├── assets                        # Pasta com arquivos estáticos usados na interface
+│   ├── avber.png                 
+│   ├── print.png                 
+│   └── PUCMinas.ico              
+├── AVBER-Report.pdf              # Relatório PDF gerado e exibido no app
+├── data                          # Dados de entrada e resultados brutos da análise
+│   ├── ad_*.jpg                  # Frames dos anúncios com metadados de emoção
+│   ├── cam_*.jpg                 # Frames da webcam com metadados de emoção
+│   ├── emotion_analysis.csv      # Resultados da análise de emoções em formato tabular
+│   └── gaze_data.csv             # Dados de rastreamento de olhar exportados
+├── LICENSE                       
+├── out                           # Arquivos gerados como saída visual
+│   ├── emotion_plot.png          
+│   ├── heatmap.png               
+│   └── webcam_output.mp4         
+├── components                    # Módulos de funcionalidades da aplicação
+│   ├── emotion_analysis.py       # Análise de emoções via reconhecimento facial
+│   ├── gaze_tracker.py           # Módulo de rastreamento de olhar
+│   ├── gaze_tracking             # Biblioteca integrada de rastreamento ocular
+│   ├── __init__.py               # Torna `components` um pacote Python
+│   ├── utils.py                  # Funções auxiliares reutilizáveis
+│   └── visualization.py          # Funções de visualização (gráficos, imagens, etc.)
+├── README.md                     
+├── requirements.txt              # Requisitos padrão para instalação geral
+├── requirements_py310_fer.txt    
+├── requirements_py310_pygaze.txt 
+├── requirements_py312_EyeTracking.txt  
+├── src                           # Vídeos de anúncios analisados
 │   ├── ad01 - Twin Lotus Toothpaste - 2003 Thailand.mp4
 │   ├── ad02 - Doritos - The New Kid.mp4
 │   ├── ad03 - Toyota - Yaris 5s Ad.mp4
 │   ├── ad04 - UFC - UFC 100 Face the pain.mp4
 │   └── ad05 - Nike - Winner Stays.mp4
-├── components                        # Módulos responsáveis pela análise e visualização dos dados.
-│   ├── emotion_analysis.py            # Análise das emoções do espectador a partir de vídeos.
-│   ├── gaze_tracker.py                # Rastreamento ocular e posição do olhar.
-│   ├── __init__.py                    # Inicialização do pacote `components`.
-│   ├── utils.py                       # Funções auxiliares.
-│   └── visualization.py               # Criação de gráficos e heatmaps.
-├── data                               # Dados utilizados na análise (imagens, vídeos, CSVs).
-│   ├── ad_0ms_neutral_73.jpg          # Frames de anúncios com emoções neutras.
-│   ├── ad_3300ms_happy_52.jpg
-│   ├── ad_7650ms_angry_41.jpg
-│   ├── cam_0ms_neutral_73.jpg         # Dados de câmeras, imagens com diferentes emoções.
-│   ├── cam_3300ms_happy_52.jpg
-│   ├── cam_7650ms_angry_41.jpg
-│   ├── emotion_analysis.csv           # Dados da análise de emoções.
-│   ├── gaze_data.csv                  # Dados sobre a posição do olhar.
-│   └── webcam_output.mp4              # Vídeo gerado pela webcam durante o processo.
-├── LICENSE                            # Licença do projeto.
-├── out                                # Resultados da análise (gráficos e heatmaps).
-│   ├── emotion_plot.png               # Gráfico das emoções detectadas.
-│   └── heatmap.png                    # Heatmap do rastreamento ocular.
-├── README.md                          # Documentação do projeto.
-├── requirements_py310_fer.txt         # Dependências para Python 3.10 e análise de emoções.
-├── requirements_py310_pygaze.txt      # Dependências para Python 3.10 e rastreamento ocular.
-├── requirements_py312_EyeTracking.txt # Dependências para Python 3.12 (EyeTracking).
-├── requirements.txt                   # Dependências gerais do projeto.
-└── test                               # Testes unitários do sistema.
-    ├── test_FER.py                    # Testes do módulo de análise de emoções.
-    └── test_GazeTracking.py           # Testes do módulo de rastreamento ocular.
-
-11 diretórios, 36 arquivos
+└── test                         # Testes automatizados do projeto
+    ├── test_FER.py              
+    └── test_GazeTracking.py     
 ```
 
 ---
