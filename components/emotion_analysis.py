@@ -21,7 +21,7 @@ def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
     # Pastas para salvar os frames
     os.makedirs(FRAME_OUT_PATH, exist_ok=True)
 
-    # Emocoes ja capturadas
+    # Dicionário para registrar a primeira ocorrência de cada emoção
     first_occurrences = {}
 
     while True:
@@ -45,22 +45,22 @@ def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
             dominant = "none"
             confidence = 0
 
-        # Salvar primeira ocorrência
+        # Salvar dados do frame
+        data.append({
+            "frame": frame_num,
+            "time": timestamp,
+            "emotion": dominant,
+            "confidence": confidence
+        })
+
+        # Verifica e salva apenas a primeira ocorrência de cada emoção
         if dominant != "none" and dominant not in first_occurrences:
-            first_occurrences[dominant] = timestamp
-            ts_ms = int(timestamp * 1000)
-            filename_suffix = f"{ts_ms}ms_{dominant}_{confidence}"
-
-            # Frame da webcam
-            webcam_filename = f"{FRAME_OUT_PATH}/cam_{filename_suffix}.jpg"
-            cv2.imwrite(webcam_filename, frame_face)
-
-            # Frame do vídeo assistido
-            if ret_source:
-                source_filename = f"{FRAME_OUT_PATH}/ad_{filename_suffix}.jpg"
-                cv2.imwrite(source_filename, frame_source)
-
-        data.append({"frame": frame_num, "time": timestamp, "emotion": dominant, "confidence": confidence})
+            first_occurrences[dominant] = {
+                "timestamp": timestamp,
+                "frame_face": frame_face.copy(),
+                "frame_source": frame_source.copy() if ret_source else None,
+                "confidence": confidence
+            }
 
         frame_num += 1
 
@@ -73,7 +73,23 @@ def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
     # Salva CSV com os dados
     df = pd.DataFrame(data)
     os.makedirs(DATA_OUT_PATH, exist_ok=True)
-    df.to_csv(f"{DATA_OUT_PATH}/emotion_analysis.csv", index=False)
+    csv_path = os.path.join(DATA_OUT_PATH, "emotion_analysis.csv")
+    df.to_csv(csv_path, index=False)
+
+    # Salva os frames correspondentes à primeira ocorrência de cada emoção
+    for emotion, info in first_occurrences.items():
+        ts_ms = int(info["timestamp"] * 1000)
+        filename_suffix = f"{ts_ms}ms_{emotion}_{info['confidence']}"
+
+        # Frame da webcam
+        webcam_filename = os.path.join(FRAME_OUT_PATH, f"cam_{filename_suffix}.jpg")
+        cv2.imwrite(webcam_filename, info["frame_face"])
+
+        # Frame do vídeo assistido
+        if info["frame_source"] is not None:
+            ad_filename = os.path.join(FRAME_OUT_PATH, f"ad_{filename_suffix}.jpg")
+            cv2.imwrite(ad_filename, info["frame_source"])
+
 
 
 def live_emotion_map(frame: av.VideoFrame) -> av.VideoFrame:
