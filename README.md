@@ -9,6 +9,9 @@
     <b>AVBER - Ads Validator By Emotional Recognition:</b> <i>Integrated analysis of advertising campaigns based on visual and emotional responses from the viewer's cognitive perspective</i>
 </p>
 
+### Integrantes
+- Lucas Leal
+
 ---
 ### **Descrição do Projeto**
 - [▶ **Vídeo de demonstração**](https://youtu.be/E7MuDGmdPfQ)
