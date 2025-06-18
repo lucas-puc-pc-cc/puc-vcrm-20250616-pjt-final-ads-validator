@@ -19,6 +19,7 @@ def del_files(dir):
 
 OUT_DIR_PATH = "out"
 CAM_VIDEO_PATH = f"{OUT_DIR_PATH}/webcam_output.mp4"
+CAM_VIDEO_FIXED_PATH = f"{OUT_DIR_PATH}/webcam_output_fixed.mp4"
 PDF_PATH = "AVBER-Report.pdf"  # caminho relativo ao arquivo PDF
 
 st.set_page_config(layout="wide")
@@ -192,17 +193,19 @@ if st.session_state["TMP_VIDEO_PATH"]:
 
         if not st.session_state["CANCELED_ANALYSIS"]:
 
+            adjust_cam_video_speed(CAM_VIDEO_PATH, AD_VIDEO_PATH, CAM_VIDEO_FIXED_PATH)
+
             def update_progress(progress):
                 percent = int(progress * 100)
                 status_placeholder.markdown(f"🗘 Processing emotions... {percent}%")
                 progress_bar.progress(percent)
 
-            process_emotions(CAM_VIDEO_PATH, AD_VIDEO_PATH, progress_callback=update_progress)
+            process_emotions(CAM_VIDEO_FIXED_PATH, AD_VIDEO_PATH, progress_callback=update_progress)
             with col_info:
                 st.markdown(f"🗹 Processing emotions... 100%")
 
             status_placeholder.markdown("🗘 Processing gaze tracking...")
-            track_gaze(CAM_VIDEO_PATH)
+            track_gaze(CAM_VIDEO_FIXED_PATH)
             with col_info:
                 st.markdown("🗹 Processing gaze tracking... 100%")
 
