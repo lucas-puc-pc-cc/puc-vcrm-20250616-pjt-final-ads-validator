@@ -1,6 +1,7 @@
 from fer import FER
 import av
 import cv2
+import numpy as np
 import os
 import pandas as pd
 
@@ -11,18 +12,11 @@ FRAME_OUT_PATH = DATA_OUT_PATH  # "data/frames"
 def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
     detector = FER(mtcnn=True)
     cap_face = cv2.VideoCapture(video_path_cam)
-    cap_source = cv2.VideoCapture(video_path_ad)
 
     data = []
     frame_num = 0
     total_frames = int(cap_face.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap_face.get(cv2.CAP_PROP_FPS)
-
-    # Pastas para salvar os frames
-    os.makedirs(FRAME_OUT_PATH, exist_ok=True)
-
-    # Dicionário para registrar a primeira ocorrência de cada emoção
-    first_occurrences = {}
 
     while True:
         ret_face, frame_face = cap_face.read()
@@ -30,11 +24,6 @@ def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
             break
 
         timestamp = frame_num / fps
-
-        # Lê frame do vídeo assistido no mesmo instante
-        cap_source.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
-        ret_source, frame_source = cap_source.read()
-
         result = detector.detect_emotions(frame_face)
 
         if result:
@@ -45,51 +34,86 @@ def process_emotions(video_path_cam, video_path_ad, progress_callback=None):
             dominant = "none"
             confidence = 0
 
-        # Salvar dados do frame
-        data.append({
-            "frame": frame_num,
-            "time": timestamp,
-            "emotion": dominant,
-            "confidence": confidence
-        })
-
-        # Verifica e salva apenas a primeira ocorrência de cada emoção
-        if dominant != "none" and dominant not in first_occurrences:
-            first_occurrences[dominant] = {
-                "timestamp": timestamp,
-                "frame_face": frame_face.copy(),
-                "frame_source": frame_source.copy() if ret_source else None,
-                "confidence": confidence
-            }
+        data.append({"frame": frame_num, "time": timestamp, "emotion": dominant, "confidence": confidence})
 
         frame_num += 1
-
-        if progress_callback is not None and total_frames > 0:
+        if progress_callback and total_frames > 0:
             progress_callback(frame_num / total_frames)
 
     cap_face.release()
-    cap_source.release()
 
-    # Salva CSV com os dados
+    # Salvar CSV
     df = pd.DataFrame(data)
     os.makedirs(DATA_OUT_PATH, exist_ok=True)
     csv_path = os.path.join(DATA_OUT_PATH, "emotion_analysis.csv")
     df.to_csv(csv_path, index=False)
 
-    # Salva os frames correspondentes à primeira ocorrência de cada emoção
-    for emotion, info in first_occurrences.items():
-        ts_ms = int(info["timestamp"] * 1000)
-        filename_suffix = f"{ts_ms}ms_{emotion}_{info['confidence']}"
+    # 2. Etapa de Salvamento de Frames Baseados no CSV (após análise)
+    cap_face = cv2.VideoCapture(video_path_cam)
+    cap_ad = cv2.VideoCapture(video_path_ad)
 
-        # Frame da webcam
-        webcam_filename = os.path.join(FRAME_OUT_PATH, f"cam_{filename_suffix}.jpg")
-        cv2.imwrite(webcam_filename, info["frame_face"])
+    os.makedirs(FRAME_OUT_PATH, exist_ok=True)
+    saved_emotions = set()
 
-        # Frame do vídeo assistido
-        if info["frame_source"] is not None:
+    for _, row in df.iterrows():
+        emotion = row["emotion"]
+        if emotion == "none" or emotion in saved_emotions:
+            continue  # Só salva a primeira ocorrência de cada emoção válida
+
+        timestamp = row["time"]
+        ts_ms = int(timestamp * 1000)
+        confidence = row["confidence"]
+
+        # Captura frame da webcam
+        cap_face.set(cv2.CAP_PROP_POS_MSEC, ts_ms)
+        ret_cam, frame_cam = cap_face.read()
+
+        # Captura frame do vídeo assistido
+        cap_ad.set(cv2.CAP_PROP_POS_MSEC, ts_ms)
+        ret_ad, frame_ad = cap_ad.read()
+
+        filename_suffix = f"{ts_ms}ms_{emotion}_{confidence}"
+
+        if ret_ad:
             ad_filename = os.path.join(FRAME_OUT_PATH, f"ad_{filename_suffix}.jpg")
-            cv2.imwrite(ad_filename, info["frame_source"])
+            cv2.imwrite(ad_filename, frame_ad)
 
+        # if ret_cam:
+        #     webcam_filename = os.path.join(FRAME_OUT_PATH, f"cam_{filename_suffix}.jpg")
+        #     cv2.imwrite(webcam_filename, frame_cam)
+
+        if ret_cam:
+            faces = detector.detect_emotions(frame_cam)  # seu código para detectar emoções
+            for face in faces:
+                (x, y, w, h) = face["box"]
+                emotions = face["emotions"]
+
+                # Cor amarela personalizada em BGR
+                color = (0, 224, 224)
+
+                # Desenha o retângulo ao redor do rosto
+                cv2.rectangle(frame_cam, (x, y), (x + w, y + h), color, 2)
+
+                # Prepara as linhas de texto
+                lines = [f"{emotion}: {value:.2f}" for emotion, value in emotions.items()]
+
+                # Posição inicial do texto
+                text_x = x + w + 5
+                text_y = y + 15
+
+                # Escreve cada linha com espessura maior (negrito)
+                for i, line in enumerate(lines):
+                    y_pos = text_y + i * 20  # aumentei o espaçamento pra caber o negrito
+                    cv2.putText(frame_cam, line, (text_x, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
+
+            # Salva o frame com os desenhos
+            webcam_filename = os.path.join(FRAME_OUT_PATH, f"cam_{filename_suffix}.jpg")
+            cv2.imwrite(webcam_filename, frame_cam)
+
+        saved_emotions.add(emotion)
+
+    cap_face.release()
+    cap_ad.release()
 
 
 def live_emotion_map(frame: av.VideoFrame) -> av.VideoFrame:
