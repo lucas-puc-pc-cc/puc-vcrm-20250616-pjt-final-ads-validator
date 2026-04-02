@@ -14,8 +14,13 @@
 
 ---
 ### **Descrição do Projeto**
-- [▶ **Vídeo de demonstração**](https://youtu.be/E7MuDGmdPfQ)
-- [🗎 Leia a descrição completa no Google Docs](https://docs.google.com/document/d/16zR-Yyn3FRSrZcztXzChu3yRixsqHoV_HX5oCLeXQ1Q).
+
+
+▶ **Vídeo de demonstração**
+
+[<img src="https://img.youtube.com/vi/E7MuDGmdPfQ/maxresdefault.jpg" width="33%" Title="Java">](https://youtu.be/E7MuDGmdPfQ)
+
+[🗎 Leia a descrição completa no Google Docs](https://docs.google.com/document/d/16zR-Yyn3FRSrZcztXzChu3yRixsqHoV_HX5oCLeXQ1Q)
 
 <div align="center">
     <img src="assets/print.png" height="100%" style="border-radius: 10px;" />
